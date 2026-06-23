@@ -11,5 +11,11 @@
       "framework": "express",
       "entrypoint": "server.js"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/((?!_/backend).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
