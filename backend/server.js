@@ -11,6 +11,17 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 app.use(cors());
 app.use(express.json());
 
+// Strip Vercel Service route prefix if present
+app.use((req, res, next) => {
+  if (req.url.startsWith('/_/backend')) {
+    req.url = req.url.substring(10);
+    if (!req.url.startsWith('/')) {
+      req.url = '/' + req.url;
+    }
+  }
+  next();
+});
+
 // --- Admin Authentication Middleware ---
 const adminAuth = (req, res, next) => {
   const authHeader = req.headers['authorization'] || req.headers['x-admin-password'];
