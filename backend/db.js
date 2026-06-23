@@ -1,10 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_FILE = path.join(__dirname, 'data', 'presentations.json');
+const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_VERSION !== undefined || process.env.PORT === undefined;
+const DB_FILE = isVercel
+  ? path.join('/tmp', 'presentations.json')
+  : path.join(__dirname, 'data', 'presentations.json');
 
-// Ensure data folder exists
-if (!fs.existsSync(path.dirname(DB_FILE))) {
+// Ensure data folder exists (only locally, /tmp always exists on Vercel)
+if (!isVercel && !fs.existsSync(path.dirname(DB_FILE))) {
   fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
 }
 
