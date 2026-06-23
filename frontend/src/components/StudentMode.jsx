@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle, Send, Users, WifiOff } from 'lucide-react';
-import { getWebSocketUrl } from '../App';
+import { getWebSocketUrl, getApiUrl } from '../App';
 
 function StudentMode({ joinCode, voterId, onExit }) {
   const [slide, setSlide] = useState(null);
@@ -39,7 +39,7 @@ function StudentMode({ joinCode, voterId, onExit }) {
   // Fetch presentation title
   const fetchPresentationDetails = async () => {
     try {
-      const res = await fetch(`/api/presentations/code/${joinCode}`);
+      const res = await fetch(getApiUrl(`/api/presentations/code/${joinCode}`));
       if (res.ok) {
         const data = await res.json();
         setPresentationTitle(data.title);

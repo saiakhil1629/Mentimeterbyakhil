@@ -3,8 +3,9 @@ import {
   Plus, Trash, Play, ArrowLeft, BarChart2, Cloud, Sliders, MessageSquare, 
   Settings, RefreshCw, Check, AlertCircle, Edit2 
 } from 'lucide-react';
+import { getApiUrl } from '../App';
 
-function Dashboard({ onStartPresentation, onBackToHome }) {
+function Dashboard({ adminPassword, onStartPresentation, onBackToHome, onLogout }) {
   const [presentations, setPresentations] = useState([]);
   const [selectedPres, setSelectedPres] = useState(null);
   const [activeSlideIdx, setActiveSlideIdx] = useState(0);
@@ -22,7 +23,9 @@ function Dashboard({ onStartPresentation, onBackToHome }) {
   const fetchPresentations = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/presentations');
+      const res = await fetch(getApiUrl('/api/presentations'), {
+        headers: { 'Authorization': adminPassword }
+      });
       if (res.ok) {
         const data = await res.json();
         setPresentations(data);
@@ -39,9 +42,12 @@ function Dashboard({ onStartPresentation, onBackToHome }) {
     if (!newTitle.trim()) return;
 
     try {
-      const res = await fetch('/api/presentations', {
+      const res = await fetch(getApiUrl('/api/presentations'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': adminPassword
+        },
         body: JSON.stringify({ title: newTitle.trim() })
       });
       if (res.ok) {
@@ -61,8 +67,9 @@ function Dashboard({ onStartPresentation, onBackToHome }) {
     if (!window.confirm("Are you sure you want to delete this presentation?")) return;
 
     try {
-      const res = await fetch(`/api/presentations/${id}`, {
-        method: 'DELETE'
+      const res = await fetch(getApiUrl(`/api/presentations/${id}`), {
+        method: 'DELETE',
+        headers: { 'Authorization': adminPassword }
       });
       if (res.ok) {
         setPresentations(presentations.filter(p => p.id !== id));
@@ -86,9 +93,12 @@ function Dashboard({ onStartPresentation, onBackToHome }) {
   const savePresentationState = async (updatedPres) => {
     setSaveStatus('saving');
     try {
-      const res = await fetch(`/api/presentations/${updatedPres.id}`, {
+      const res = await fetch(getApiUrl(`/api/presentations/${updatedPres.id}`), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': adminPassword
+        },
         body: JSON.stringify(updatedPres)
       });
       if (res.ok) {
@@ -212,6 +222,9 @@ function Dashboard({ onStartPresentation, onBackToHome }) {
         <div style={styles.header}>
           <button onClick={onBackToHome} className="btn-secondary" style={styles.backBtn}>
             <ArrowLeft size={16} /> Home
+          </button>
+          <button onClick={onLogout} className="btn-secondary" style={{ ...styles.backBtn, marginLeft: 'auto', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)', color: '#fca5a5' }}>
+            Logout
           </button>
           <h1 style={styles.dashboardTitle}>Presenter Portal</h1>
         </div>

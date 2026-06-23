@@ -6,19 +6,42 @@ const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5050;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
 app.use(cors());
 app.use(express.json());
 
+// --- Admin Authentication Middleware ---
+const adminAuth = (req, res, next) => {
+  const authHeader = req.headers['authorization'] || req.headers['x-admin-password'];
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+
+  if (token === ADMIN_PASSWORD) {
+    next();
+  } else {
+    res.status(401).json({ error: "Unauthorized: Invalid admin password" });
+  }
+};
+
+// Simple endpoint to verify admin password on login
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (password === ADMIN_PASSWORD) {
+    res.json({ success: true, token: ADMIN_PASSWORD });
+  } else {
+    res.status(401).json({ error: "Invalid password" });
+  }
+});
+
 // --- REST Endpoints ---
 
 // Get all presentations
-app.get('/api/presentations', (req, res) => {
+app.get('/api/presentations', adminAuth, (req, res) => {
   res.json(db.getAll());
 });
 
 // Get a single presentation
-app.get('/api/presentations/:id', (req, res) => {
+app.get('/api/presentations/:id', adminAuth, (req, res) => {
   const presentation = db.getById(req.params.id);
   if (!presentation) {
     return res.status(404).json({ error: "Presentation not found" });
@@ -27,7 +50,7 @@ app.get('/api/presentations/:id', (req, res) => {
 });
 
 // Create a new presentation
-app.post('/api/presentations', (req, res) => {
+app.post('/api/presentations', adminAuth, (req, res) => {
   const { title } = req.body;
   if (!title || title.trim() === "") {
     return res.status(400).json({ error: "Title is required" });
@@ -37,7 +60,7 @@ app.post('/api/presentations', (req, res) => {
 });
 
 // Update a presentation (e.g. title, slide list, or general settings)
-app.put('/api/presentations/:id', (req, res) => {
+app.put('/api/presentations/:id', adminAuth, (req, res) => {
   const updated = db.update(req.params.id, req.body);
   if (!updated) {
     return res.status(404).json({ error: "Presentation not found" });
@@ -50,7 +73,7 @@ app.put('/api/presentations/:id', (req, res) => {
 });
 
 // Delete a presentation
-app.delete('/api/presentations/:id', (req, res) => {
+app.delete('/api/presentations/:id', adminAuth, (req, res) => {
   const deleted = db.delete(req.params.id);
   if (!deleted) {
     return res.status(404).json({ error: "Presentation not found" });
@@ -83,7 +106,7 @@ app.get('/api/presentations/code/:code', (req, res) => {
 });
 
 // Clear slide votes
-app.post('/api/presentations/:id/slides/:slideId/clear', (req, res) => {
+app.post('/api/presentations/:id/slides/:slideId/clear', adminAuth, (req, res) => {
   const updated = db.clearVotes(req.params.id, req.params.slideId);
   if (!updated) {
     return res.status(404).json({ error: "Presentation or slide not found" });
@@ -155,6 +178,13 @@ function handleInit(socket, data) {
   socket.role = data.role; // 'presenter' or 'student'
   
   if (data.role === 'presenter') {
+    // Validate admin password
+    if (data.password !== ADMIN_PASSWORD) {
+      socket.send(JSON.stringify({ type: 'error', message: 'Unauthorized: Invalid admin password' }));
+      socket.close();
+      return;
+    }
+
     socket.presentationId = data.presentationId;
     console.log(`Presenter connected to presentation: ${data.presentationId}`);
     

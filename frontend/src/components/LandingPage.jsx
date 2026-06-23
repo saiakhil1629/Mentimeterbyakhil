@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { BarChart2, Tv, ArrowRight, Sparkles, MessageSquare, Cloud, Sliders, Play } from 'lucide-react';
+import { BarChart2, Tv, ArrowRight, Sparkles, MessageSquare, Cloud, Sliders, Play, X, Lock } from 'lucide-react';
+import { getApiUrl } from '../App';
 
-function LandingPage({ onJoinStudent, onEnterDashboard }) {
+function LandingPage({ onJoinStudent, onEnterDashboard, savedAdminPassword }) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Admin Modal States
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminInputPw, setAdminInputPw] = useState('');
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState('');
 
   const handleJoin = async (e) => {
     e.preventDefault();
@@ -18,7 +25,7 @@ function LandingPage({ onJoinStudent, onEnterDashboard }) {
     setError('');
 
     try {
-      const response = await fetch(`/api/presentations/code/${cleanCode}`);
+      const response = await fetch(getApiUrl(`/api/presentations/code/${cleanCode}`));
       if (response.ok) {
         onJoinStudent(cleanCode);
       } else {
@@ -40,6 +47,54 @@ function LandingPage({ onJoinStudent, onEnterDashboard }) {
     }
   };
 
+  const handlePresenterPortalClick = async () => {
+    if (savedAdminPassword) {
+      setAdminLoading(true);
+      try {
+        const res = await fetch(getApiUrl('/api/admin/login'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: savedAdminPassword })
+        });
+        if (res.ok) {
+          onEnterDashboard(savedAdminPassword);
+          return;
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setAdminLoading(false);
+      }
+    }
+    setShowAdminModal(true);
+  };
+
+  const handleAdminLoginSubmit = async (e) => {
+    e.preventDefault();
+    if (!adminInputPw.trim()) return;
+
+    setAdminLoading(true);
+    setAdminError('');
+
+    try {
+      const res = await fetch(getApiUrl('/api/admin/login'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: adminInputPw.trim() })
+      });
+      if (res.ok) {
+        onEnterDashboard(adminInputPw.trim());
+        setShowAdminModal(false);
+      } else {
+        setAdminError('Invalid password. Access denied.');
+      }
+    } catch (err) {
+      setAdminError('Server connection error.');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
   return (
     <div style={styles.container}>
       {/* Decorative Grid Lines */}
@@ -53,7 +108,7 @@ function LandingPage({ onJoinStudent, onEnterDashboard }) {
           </div>
           <span style={styles.logoText}>VibeVote</span>
         </div>
-        <button onClick={onEnterDashboard} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
+        <button onClick={handlePresenterPortalClick} className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
           <Tv size={16} /> Presenter Portal
         </button>
       </header>
@@ -138,6 +193,41 @@ function LandingPage({ onJoinStudent, onEnterDashboard }) {
           <p style={styles.featureDesc}>Collect direct feedback, questions, or comments in a clean dashboard grid.</p>
         </div>
       </div>
+
+      {/* Admin Password Modal */}
+      {showAdminModal && (
+        <div style={styles.modalBackdrop} onClick={() => setShowAdminModal(false)}>
+          <div className="glass-panel" style={styles.adminModal} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Lock size={16} color="var(--primary)" />
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 'bold' }}>Presenter Security</h3>
+              </div>
+              <button onClick={() => setShowAdminModal(false)} style={styles.modalCloseBtn}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleAdminLoginSubmit}>
+              <p style={styles.modalInstruction}>Enter the admin password to access the Dashboard:</p>
+              <input
+                type="password"
+                placeholder="Admin Password"
+                value={adminInputPw}
+                onChange={e => setAdminInputPw(e.target.value)}
+                className="input-field"
+                style={{ marginBottom: '16px', letterSpacing: '0.05em' }}
+                disabled={adminLoading}
+                autoFocus
+              />
+              {adminError && <div style={{ color: 'var(--error)', fontSize: '0.85rem', marginBottom: '12px', fontWeight: 500 }}>{adminError}</div>}
+              <button type="submit" className="btn-primary" style={{ width: '100%' }} disabled={adminLoading}>
+                {adminLoading ? 'Authenticating...' : 'Enter Dashboard'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -305,6 +395,43 @@ const styles = {
     color: 'var(--text-dark-secondary)',
     lineHeight: '1.5',
   },
+  modalBackdrop: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    background: 'rgba(0, 0, 0, 0.75)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2000,
+  },
+  adminModal: {
+    width: '100%',
+    maxWidth: '360px',
+    padding: '24px',
+    borderRadius: '16px',
+    boxShadow: 'var(--shadow-lg)',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+  },
+  modalCloseBtn: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: 'var(--text-dark-muted)',
+  },
+  modalInstruction: {
+    fontSize: '0.9rem',
+    color: 'var(--text-dark-secondary)',
+    lineHeight: '1.5',
+    marginBottom: '16px',
+  }
 };
 
 export default LandingPage;

@@ -3,9 +3,9 @@ import {
   ChevronLeft, ChevronRight, X, Eye, EyeOff, Trash2, QrCode, 
   HelpCircle, Users, Sparkles 
 } from 'lucide-react';
-import { getWebSocketUrl } from '../App';
+import { getWebSocketUrl, getApiUrl } from '../App';
 
-function PresenterMode({ presentationId, onExit }) {
+function PresenterMode({ presentationId, adminPassword, onExit }) {
   const [presentation, setPresentation] = useState(null);
   const [showResults, setShowResults] = useState(true);
   const [showQR, setShowQR] = useState(false);
@@ -42,7 +42,8 @@ function PresenterMode({ presentationId, onExit }) {
       ws.send(JSON.stringify({
         type: 'init',
         role: 'presenter',
-        presentationId
+        presentationId,
+        password: adminPassword
       }));
     };
 
@@ -108,8 +109,9 @@ function PresenterMode({ presentationId, onExit }) {
     if (!window.confirm("Clear all responses for the current slide?")) return;
     
     try {
-      await fetch(`/api/presentations/${presentation.id}/slides/${activeSlide.id}/clear`, {
-        method: 'POST'
+      await fetch(getApiUrl(`/api/presentations/${presentation.id}/slides/${activeSlide.id}/clear`), {
+        method: 'POST',
+        headers: { 'Authorization': adminPassword }
       });
       // WebSocket sync will broadcast the cleared results
     } catch (err) {
