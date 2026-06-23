@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_VERSION !== undefined || process.env.PORT === undefined;
+const isVercel = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_VERSION !== undefined || process.env.NOW_REGION !== undefined;
 const DB_FILE = isVercel
   ? path.join('/tmp', 'presentations.json')
   : path.join(__dirname, 'data', 'presentations.json');
